@@ -75,9 +75,65 @@ def disk():
 def battery():
     cap_p = Path("/sys/class/power_supply/BAT0/capacity")
     ac_p  = Path("/sys/class/power_supply/AC/online")
+    en_p  = Path("/sys/class/power_supply/BAT0/power_now")
+
     if not cap_p.exists():
-        return None, None
-    return int(cap_p.read_text()), int(ac_p.read_text()) if ac_p.exists() else None
+        return None, None, None
+
+    cap = int(cap_p.read_text())
+    ac = int(ac_p.read_text()) if ac_p.exists() else None
+    power_now = int(en_p.read_text()) if en_p.exists() else None
+
+    return cap, ac, power_now
+
+def battery_info():
+    """Devuelve estado de batería con estimado de tiempo restante."""
+    cap, ac, power_now = battery()
+
+    if cap is None:
+        return None
+
+    info = {"capacity": cap, "ac": ac}
+
+    # Estimar tiempo restante si está en batería
+    if ac != 1 and power_now and power_now > 0:
+        # power_now está en microwatios, convertir a ratio por hora
+        hours_left = (cap / 100.0) * (3600 / (power_now / 1e6)) if cap > 0 else 0
+        info["hours_left"] = max(0, hours_left)
+
+    return info
+
+def battery_msg():
+    """Mensaje formateado de estado de batería."""
+    info = battery_info()
+
+    if info is None:
+        return "❌ Sin información de batería"
+
+    cap = info["capacity"]
+    ac = info["ac"]
+
+    lines = ["<b>🔋 Batería</b>", ""]
+
+    if ac == 1:
+        lines.append(f"⚡ Cargando: {cap}%")
+    else:
+        if cap < 20:
+            icon = "🔴"
+        elif cap < 50:
+            icon = "🟡"
+        else:
+            icon = "🟢"
+        lines.append(f"{icon} En batería: {cap}%")
+
+        if "hours_left" in info:
+            h = int(info["hours_left"])
+            m = int((info["hours_left"] - h) * 60)
+            if h > 0 or m > 0:
+                lines.append(f"⏱ Tiempo restante: {h}h {m}m")
+
+    register_temperature()
+    return "\n".join(lines)
 
 def load_avg():
     parts = Path("/proc/loadavg").read_text().split()
@@ -136,7 +192,7 @@ def status_msg():
     dfree, dtotal, dpct = disk()
     lines.append(f"{ci(dpct,70,85)} <b>Disco</b>    {dfree} libre de {dtotal} ({dpct}%)")
 
-    cap, ac = battery()
+    cap, ac, _ = battery()
     if cap is not None:
         if ac == 1:
             lines.append(f"⚡ <b>Batería</b>  {cap}% · cargando")
