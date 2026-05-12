@@ -319,6 +319,56 @@ def internet_msg():
     register_temperature()
     return "\n".join(lines)
 
+def temperature_stats():
+    """Obtiene estadísticas de temperatura de últimas 24h."""
+    data_file = Path("/tmp/temperature.json")
+
+    if not data_file.exists():
+        return None
+
+    try:
+        data = json.loads(data_file.read_text())
+    except (json.JSONDecodeError, FileNotFoundError):
+        return None
+
+    if not data:
+        return None
+
+    # Filtrar últimas 24h
+    now = int(time.time())
+    recent = [d for d in data if now - d.get("timestamp", 0) < 86400]
+
+    if len(recent) < 2:
+        return None
+
+    temps = [d["temp"] for d in recent]
+
+    return {
+        "max": max(temps),
+        "min": min(temps),
+        "avg": sum(temps) / len(temps),
+        "current": temps[-1],
+        "count": len(temps)
+    }
+
+def temperature_msg():
+    """Mensaje formateado de estadísticas de temperatura."""
+    stats = temperature_stats()
+
+    if stats is None:
+        return "⏳ Sin datos de temperatura (necesita 24h)"
+
+    lines = ["<b>🌡️ Temperatura (últimas 24h)</b>", ""]
+    lines.append(f"📈 Máximo: {stats['max']}°C")
+    lines.append(f"📉 Mínimo: {stats['min']}°C")
+    lines.append(f"📊 Promedio: {stats['avg']:.1f}°C")
+    lines.append(f"🔴 Actual: {stats['current']}°C")
+    lines.append("")
+    lines.append(f"📋 Registros: {stats['count']} muestras")
+
+    register_temperature()
+    return "\n".join(lines)
+
 
 # ── Message builders ──────────────────────────────────────────────────────────
 
