@@ -271,7 +271,7 @@ def get_ping(host="8.8.8.8"):
                         time_str = parts[1].split()[0]
                         return float(time_str)
         return None
-    except Exception:
+    except (subprocess.TimeoutExpired, OSError):
         return None
 
 def internet_speed():
@@ -299,13 +299,22 @@ def internet_msg():
     """Mensaje formateado de velocidad de conexión."""
     result = internet_speed()
 
-    if result.get("error"):
-        return f"⚠️ No se pudo medir velocidad: {result['error']}"
+    if not isinstance(result, dict) or result.get("error"):
+        error_msg = result.get("error") if isinstance(result, dict) else "Error desconocido"
+        return f"⚠️ No se pudo medir velocidad: {error_msg}"
+
+    download = result.get("download", 0)
+    upload = result.get("upload", 0)
+    ping = result.get("ping", 0)
+
+    # Validar que sean números
+    if not all(isinstance(v, (int, float)) for v in [download, upload, ping]):
+        return "⚠️ Error: datos de velocidad inválidos"
 
     lines = ["<b>🌐 Velocidad</b>", ""]
-    lines.append(f"📥 Download: {result['download']:.1f} Mbps")
-    lines.append(f"📤 Upload: {result['upload']:.1f} Mbps")
-    lines.append(f"📡 Ping: {result['ping']:.0f} ms (8.8.8.8)")
+    lines.append(f"📥 Download: {download:.1f} Mbps")
+    lines.append(f"📤 Upload: {upload:.1f} Mbps")
+    lines.append(f"📡 Ping: {ping:.0f} ms")
 
     register_temperature()
     return "\n".join(lines)
