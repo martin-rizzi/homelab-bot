@@ -171,6 +171,89 @@ def docker_info():
     )
     return [(l.split("\t")[0], l.split("\t")[1]) for l in out.strip().splitlines() if l]
 
+def get_cpu_percent(pid_stat_line):
+    """Calcula CPU% de una línea de /proc/[pid]/stat."""
+    try:
+        fields = pid_stat_line.split()
+        if len(fields) < 15:
+            return 0
+
+        utime = int(fields[13])
+        stime = int(fields[14])
+        total_time = utime + stime
+
+        # CPU% muy simplificado (sin escalar por núcleos)
+        # Devuelve 0-100 como aproximación
+        return min(100, total_time // 100000)
+    except (ValueError, IndexError):
+        return 0
+
+def top_processes():
+    """Devuelve top 5 procesos por consumo combinado (CPU + RAM)."""
+    processes = []
+
+    for pid_dir in Path("/proc").iterdir():
+        if not pid_dir.is_dir():
+            continue
+
+        try:
+            pid = int(pid_dir.name)
+            if pid == os.getpid():
+                continue
+
+            # Leer nombre del proceso
+            comm_file = pid_dir / "comm"
+            if not comm_file.exists():
+                continue
+            name = comm_file.read_text().strip()
+
+            # Leer CPU
+            stat_file = pid_dir / "stat"
+            if not stat_file.exists():
+                continue
+            cpu_pct = get_cpu_percent(stat_file.read_text())
+
+            # Leer RAM
+            status_file = pid_dir / "status"
+            if not status_file.exists():
+                continue
+            rss_mb = 0
+            for line in status_file.read_text().splitlines():
+                if line.startswith("VmRSS:"):
+                    rss_kb = int(line.split()[1])
+                    rss_mb = rss_kb // 1024
+                    break
+
+            # Score combinado
+            score = cpu_pct + (rss_mb // 100)
+            processes.append((name, cpu_pct, rss_mb, score))
+
+        except (ValueError, FileNotFoundError, PermissionError):
+            continue
+
+    # Top 5 por score
+    return sorted(processes, key=lambda x: x[3], reverse=True)[:5]
+
+def processes_msg():
+    """Mensaje formateado de top 5 procesos."""
+    try:
+        procs = top_processes()
+    except Exception as e:
+        return f"❌ Error leyendo procesos: {e}"
+
+    if not procs:
+        return "❌ Sin procesos"
+
+    lines = ["<b>🔝 Top 5 procesos</b>", ""]
+
+    for i, (name, cpu, ram, _) in enumerate(procs, 1):
+        lines.append(f"{i}. <code>{name}</code>")
+        lines.append(f"   CPU: {cpu}% | RAM: {ram}MB")
+        lines.append("")
+
+    register_temperature()
+    return "\n".join(lines)
+
 
 # ── Message builders ──────────────────────────────────────────────────────────
 
