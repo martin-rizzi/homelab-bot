@@ -83,6 +83,31 @@ def load_avg():
     parts = Path("/proc/loadavg").read_text().split()
     return parts[0], parts[1], parts[2]
 
+def register_temperature():
+    """Guarda temperatura actual en temperature.json si existe sensor."""
+    temp = cpu_temp()
+    if temp is None:
+        return
+
+    data_file = Path("/usr/local/bin/temperature.json")
+    try:
+        if data_file.exists():
+            data = json.loads(data_file.read_text())
+        else:
+            data = []
+
+        # Limpiar datos > 24h
+        now = int(time.time())
+        data = [d for d in data if now - d.get("timestamp", 0) < 86400]
+
+        # Agregar nuevo dato
+        data.append({"timestamp": now, "temp": temp})
+
+        # Guardar
+        data_file.write_text(json.dumps(data))
+    except Exception:
+        pass  # Fallos silenciosos en persistencia
+
 def docker_info():
     out = subprocess.check_output(
         ["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Status}}"],
