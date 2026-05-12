@@ -412,6 +412,7 @@ def status_msg():
     except Exception:
         lines.append("❓ <b>Docker</b>   no disponible")
 
+    register_temperature()
     return "\n".join(lines)
 
 def docker_msg():
