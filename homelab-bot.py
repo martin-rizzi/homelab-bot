@@ -84,12 +84,12 @@ def load_avg():
     return parts[0], parts[1], parts[2]
 
 def register_temperature():
-    """Guarda temperatura actual en temperature.json si existe sensor."""
+    """Guarda temperatura actual en temperature.json si existe sensor. Fallos silenciosos en persistencia."""
     temp = cpu_temp()
     if temp is None:
         return
 
-    data_file = Path("/usr/local/bin/temperature.json")
+    data_file = Path("/tmp/temperature.json")
     try:
         if data_file.exists():
             data = json.loads(data_file.read_text())
@@ -105,7 +105,7 @@ def register_temperature():
 
         # Guardar
         data_file.write_text(json.dumps(data))
-    except Exception:
+    except (IOError, json.JSONDecodeError):
         pass  # Fallos silenciosos en persistencia
 
 def docker_info():
