@@ -434,9 +434,13 @@ def docker_msg():
 def help_msg():
     return (
         "Comandos disponibles:\n\n"
-        "/status — estado del sistema\n"
-        "/docker — detalle de contenedores\n"
-        "/help   — este mensaje"
+        "/status       — estado del sistema\n"
+        "/docker       — detalle de contenedores\n"
+        "/bateria      — estado de batería y tiempo restante\n"
+        "/procesos     — top 5 procesos por consumo\n"
+        "/internet     — velocidad de conexión (speedtest)\n"
+        "/temperatura  — estadísticas últimas 24h\n"
+        "/help         — este mensaje"
     )
 
 
