@@ -1,0 +1,15 @@
+[Unit]
+Description=Homelab Telegram status bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/homelab-bot.env
+ExecStart=/usr/bin/python3 /usr/local/bin/homelab-bot.py
+Restart=always
+RestartSec=10
+User=root
+
+[Install]
+WantedBy=multi-user.target
