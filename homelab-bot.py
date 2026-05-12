@@ -254,6 +254,62 @@ def processes_msg():
     register_temperature()
     return "\n".join(lines)
 
+def get_ping(host="8.8.8.8"):
+    """Mide ping en ms a un host."""
+    try:
+        result = subprocess.run(
+            ["ping", "-c", "1", "-W", "2", host],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                if "time=" in line:
+                    parts = line.split("time=")
+                    if len(parts) > 1:
+                        time_str = parts[1].split()[0]
+                        return float(time_str)
+        return None
+    except Exception:
+        return None
+
+def internet_speed():
+    """Mide velocidad con speedtest-cli."""
+    try:
+        import speedtest
+
+        st = speedtest.Speedtest()
+        st.get_best_server()
+
+        download = st.download() / 1_000_000  # bps a Mbps
+        upload = st.upload() / 1_000_000      # bps a Mbps
+        ping = st.results.ping
+
+        return {
+            "download": download,
+            "upload": upload,
+            "ping": ping,
+            "error": None
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def internet_msg():
+    """Mensaje formateado de velocidad de conexión."""
+    result = internet_speed()
+
+    if result.get("error"):
+        return f"⚠️ No se pudo medir velocidad: {result['error']}"
+
+    lines = ["<b>🌐 Velocidad</b>", ""]
+    lines.append(f"📥 Download: {result['download']:.1f} Mbps")
+    lines.append(f"📤 Upload: {result['upload']:.1f} Mbps")
+    lines.append(f"📡 Ping: {result['ping']:.0f} ms (8.8.8.8)")
+
+    register_temperature()
+    return "\n".join(lines)
+
 
 # ── Message builders ──────────────────────────────────────────────────────────
 
