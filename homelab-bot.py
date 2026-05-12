@@ -446,7 +446,16 @@ def handle(message):
     if message.get("chat", {}).get("id") != ALLOWED_CHAT_ID:
         return
     cmd = message.get("text", "").strip().split()[0].lower() if message.get("text") else ""
-    if cmd == "/docker":
+
+    if cmd == "/bateria":
+        send(ALLOWED_CHAT_ID, battery_msg())
+    elif cmd == "/procesos":
+        send(ALLOWED_CHAT_ID, processes_msg())
+    elif cmd == "/internet":
+        send(ALLOWED_CHAT_ID, internet_msg())
+    elif cmd == "/temperatura":
+        send(ALLOWED_CHAT_ID, temperature_msg())
+    elif cmd == "/docker":
         send(ALLOWED_CHAT_ID, docker_msg())
     elif cmd == "/help":
         send(ALLOWED_CHAT_ID, help_msg())
