@@ -96,9 +96,9 @@ def battery_info():
     info = {"capacity": cap, "ac": ac}
 
     # Estimar tiempo restante si está en batería
-    if ac != 1 and power_now and power_now > 0:
-        # power_now está en microwatios, convertir a ratio por hora
-        hours_left = (cap / 100.0) * (3600 / (power_now / 1e6)) if cap > 0 else 0
+    if ac is not None and ac != 1 and power_now and power_now > 0:
+        power_w = power_now / 1e6
+        hours_left = (cap / 100.0) * 3600 / power_w
         info["hours_left"] = max(0, hours_left)
 
     return info
